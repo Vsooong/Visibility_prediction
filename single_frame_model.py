@@ -4,7 +4,7 @@ from torchsummary import summary
 import torch.nn as nn
 from un_supervised_model import *
 from util_project import args
-import torch.nn.functional as F
+import numpy as np
 from video_process import VideoDataset, get_transform
 
 
@@ -55,10 +55,6 @@ def train_one_epoch(model, optimizer, data_loader, criterion):
     return loss_epoch
 
 
-def evaluate(model, data_loader_test, device):
-    model.eval()
-
-
 def main(train_process=False):
     device = args.device
     dataset = VideoDataset(get_transform(train=False))
@@ -71,7 +67,7 @@ def main(train_process=False):
         num_workers=args.workers,
     )
     test_loader = torch.utils.data.DataLoader(
-        dataset_test, batch_size=args.batch_size,
+        dataset_test, batch_size=args.test_batch_size,
         shuffle=False, num_workers=args.workers,
     )
     model = get_pretrained_model(True)
@@ -84,20 +80,21 @@ def main(train_process=False):
                                                    gamma=0.8)
     criterion = nn.MSELoss().to(device)
     best_loss = 9999999
-    if train_process==True:
+    if train_process == True:
         for epoch in range(args.epochs):
             loss_epoch = train_one_epoch(model, optimizer, train_loader, criterion)
             lr_scheduler.step()
             if loss_epoch < best_loss:
                 best_loss = loss_epoch
                 torch.save(model.state_dict(), args.model_save1)
-            # evaluate on the test dataset
-            # evaluate(model, test_loader)
+            # loss1, loss2 = evaluate(model, test_loader)
+            # print (loss1, loss2)
             # torch.save(model.state_dict(), save_path)
             print(epoch, loss_epoch)
         print('training finish ')
     else:
-        evaluate(model, test_loader)
+        loss1, loss2 = evaluate(model, test_loader)
+        print(loss1, loss2)
 
 
 evaluateL1 = nn.L1Loss(reduction='sum')
@@ -116,12 +113,14 @@ def evaluate(model, test_loader):
         pred = model(images)[0].squeeze()
         total_loss1 += evaluateL1(targets, pred).data.item()
         total_loss2 += evaluateL2(targets, pred).data.item()
-        n_samples  += len(targets)
+        # print(total_loss1,total_loss2)
+        n_samples += len(targets)
 
-    return total_loss1/n_samples, total_loss2/n_samples
+    return total_loss1 / n_samples, np.sqrt(total_loss2 / n_samples)
+
 
 if __name__ == '__main__':
-    main(train_process=False)
+    main(train_process=True)
 
     # # (time step,batch size, channel, height, length)
     # input = torch.rand(8, 3, 360, 640).to(args.device)
