@@ -21,10 +21,16 @@ class Visibility(nn.Module):
 
 
 def get_pretrained_model(load_states=True):
-    encoder = get_resnet('resnet18', True).to(args.device)
+    load_res = True
+    if load_states == True:
+        load_res = False
+    encoder = get_resnet('resnet18', load_res)
     n_features = encoder.fc.in_features
-    smodel = SimCLR(encoder, n_features).to(args.device)
-    predict_model = Visibility(smodel)
+    smodel = SimCLR(encoder, n_features)
+    predict_model = Visibility(smodel).to(args.device)
+    if load_states:
+        predict_model.load_state_dict(torch.load(args.model_save1, map_location=args.device))
+        print('load single fame model from:', args.model_save1)
     return predict_model
 
 
@@ -53,7 +59,7 @@ def evaluate(model, data_loader_test, device):
     model.eval()
 
 
-def main():
+def main(train_process=False):
     device = args.device
     dataset = VideoDataset(get_transform(train=False))
     dataset_test = VideoDataset(get_transform(train=False))
@@ -68,7 +74,7 @@ def main():
         dataset_test, batch_size=args.batch_size,
         shuffle=False, num_workers=args.workers,
     )
-    model = get_pretrained_model().to(device)
+    model = get_pretrained_model(True)
 
     params = [p for p in model.parameters() if p.requires_grad]
     # optimizer = torch.optim.SGD(params, lr=0.002, momentum=0.9, weight_decay=0.0005)
@@ -78,22 +84,45 @@ def main():
                                                    gamma=0.8)
     criterion = nn.MSELoss().to(device)
     best_loss = 9999999
+    if train_process==True:
+        for epoch in range(args.epochs):
+            loss_epoch = train_one_epoch(model, optimizer, train_loader, criterion)
+            lr_scheduler.step()
+            if loss_epoch < best_loss:
+                best_loss = loss_epoch
+                torch.save(model.state_dict(), args.model_save1)
+            # evaluate on the test dataset
+            # evaluate(model, test_loader)
+            # torch.save(model.state_dict(), save_path)
+            print(epoch, loss_epoch)
+        print('training finish ')
+    else:
+        evaluate(model, test_loader)
 
-    for epoch in range(args.epochs):
-        loss_epoch = train_one_epoch(model, optimizer, train_loader, criterion)
-        lr_scheduler.step()
-        if loss_epoch < best_loss:
-            best_loss = loss_epoch
-            torch.save(model.state_dict(), args.model_save1)
-        # evaluate on the test dataset
-        evaluate(model, test_loader, device=device)
-        # torch.save(model.state_dict(), save_path)
-        print(epoch, loss_epoch)
 
+evaluateL1 = nn.L1Loss(reduction='sum')
+evaluateL2 = nn.MSELoss(reduction='sum')
+
+
+def evaluate(model, test_loader):
+    model.eval()
+    n_samples = 0
+    total_loss1 = 0
+    total_loss2 = 0
+
+    for images, targets in test_loader:
+        images = images.to(args.device)
+        targets = targets.to(args.device)
+        pred = model(images)[0].squeeze()
+        total_loss1 += evaluateL1(targets, pred).data.item()
+        total_loss2 += evaluateL2(targets, pred).data.item()
+        n_samples  += len(targets)
+
+    return total_loss1/n_samples, total_loss2/n_samples
 
 if __name__ == '__main__':
-    train()
-    # args = get_config()
+    main(train_process=False)
+
     # # (time step,batch size, channel, height, length)
     # input = torch.rand(8, 3, 360, 640).to(args.device)
     #

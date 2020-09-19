@@ -34,9 +34,10 @@ logistic_batch_size: 256
 logistic_epochs: 500
 
 img_scale_factor: 2
-#img_root_dir: "F:/data/Taicang/samples"
-img_root_dir: "/home/dl/data/visibility/output"
+img_root_dir: "F:/data/Taicang/samples"
+#img_root_dir: "/home/dl/data/visibility/output"
 img_height: 360
 img_width: 640
 past_window: 6
-model_save1: '/media/dl/GSW/Visibility_prediction/save/resnet_50.pth'
+#model_save1: '/media/dl/GSW/Visibility_prediction/save/resnet_50.pth'
+model_save1: 'D:/Visibility_prediction/save/resnet_50.pth'
