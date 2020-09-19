@@ -1,4 +1,4 @@
-import torch
+import os
 import torchvision
 from torchsummary import summary
 import torch.nn as nn
@@ -28,7 +28,7 @@ def get_pretrained_model(load_states=True):
     n_features = encoder.fc.in_features
     smodel = SimCLR(encoder, n_features)
     predict_model = Visibility(smodel).to(args.device)
-    if load_states:
+    if load_states and os.path.exists(args.model_save1):
         predict_model.load_state_dict(torch.load(args.model_save1, map_location=args.device))
         print('load single fame model from:', args.model_save1)
     return predict_model
@@ -87,6 +87,7 @@ def main(train_process=False):
             if loss_epoch < best_loss:
                 best_loss = loss_epoch
                 torch.save(model.state_dict(), args.model_save1)
+                print('performance improved, save model to:',args.model_save1)
             # loss1, loss2 = evaluate(model, test_loader)
             # print (loss1, loss2)
             # torch.save(model.state_dict(), save_path)
