@@ -57,13 +57,13 @@ def train_one_epoch(model, optimizer, data_loader, criterion):
 
 def main(train_process=False):
     device = args.device
-    dataset = VideoDataset(get_transform(train=False))
-    dataset_test = VideoDataset(get_transform(train=False))
+    dataset = VideoDataset(get_transform(train=False), path=args.img_train_dir)
+    dataset_test = VideoDataset(get_transform(train=False), path=args.img_train_dir)
 
     train_loader = torch.utils.data.DataLoader(
         dataset,
         batch_size=args.batch_size,
-        shuffle=False,
+        shuffle=True,
         num_workers=args.workers,
     )
     test_loader = torch.utils.data.DataLoader(
@@ -87,11 +87,11 @@ def main(train_process=False):
             if loss_epoch < best_loss:
                 best_loss = loss_epoch
                 torch.save(model.state_dict(), args.model_save1)
-                print('performance improved, save model to:',args.model_save1)
-            # loss1, loss2 = evaluate(model, test_loader)
-            # print (loss1, loss2)
+                print('performance improved, save model to:', args.model_save1)
+            loss1, loss2 = evaluate(model, test_loader)
+            print(loss1, loss2)
             # torch.save(model.state_dict(), save_path)
-            print(epoch, loss_epoch)
+            print('Epoch:', epoch, loss_epoch)
         print('training finish ')
     else:
         loss1, loss2 = evaluate(model, test_loader)
@@ -102,11 +102,14 @@ evaluateL1 = nn.L1Loss(reduction='sum')
 evaluateL2 = nn.MSELoss(reduction='sum')
 
 
+
 def evaluate(model, test_loader):
     model.eval()
     n_samples = 0
     total_loss1 = 0
     total_loss2 = 0
+    labels = []
+    predicts = []
 
     for images, targets in test_loader:
         images = images.to(args.device)
@@ -114,19 +117,30 @@ def evaluate(model, test_loader):
         pred = model(images)[0].squeeze()
         total_loss1 += evaluateL1(targets, pred).data.item()
         total_loss2 += evaluateL2(targets, pred).data.item()
-        # print(total_loss1,total_loss2)
         n_samples += len(targets)
-
+        for index in range(len(targets)):
+            labels.append(targets[index].data.item())
+            predicts.append(pred[index].data.item())
+    print(np.corrcoef(labels,predicts))
     return total_loss1 / n_samples, np.sqrt(total_loss2 / n_samples)
 
 
 if __name__ == '__main__':
-    main(train_process=True)
+    main(train_process=False)
 
     # # (time step,batch size, channel, height, length)
     # input = torch.rand(8, 3, 360, 640).to(args.device)
-    #
-    # model = get_pretrained_model().to(args.device)
+    # from PIL import Image
+
+    # model = get_pretrained_model(True)
+    # model.eval()
+    # file='/media/dl/GSW/high way'
+    # for i in os.listdir(file):
+    #     img_path = os.path.join(file, i)
+    #     img = Image.open(img_path).convert("RGB")
+    #     image=get_transform()(img).unsqueeze(0).to(args.device)
+    #     print(model(image))
+
     # nParams = sum([p.nelement() for p in model.parameters()])
     # print('number of parameters: %d' % nParams)
     # h_i = model(input)

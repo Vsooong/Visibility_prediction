@@ -9,13 +9,14 @@ from torchvision.io import read_video_timestamps, read_video
 
 
 class VideoDataset(Dataset):
-    def __init__(self, transforms=None):
+    def __init__(self, transforms=None, path=args.img_train_dir):
         self.transforms = transforms
-        self.imgs = list(sorted(os.listdir(args.img_root_dir)))
+        self.root = path
+        self.imgs = list(sorted(os.listdir(self.root)))
 
     def __getitem__(self, idx):
         # print("image _idx", idx)
-        img_path = os.path.join(args.img_root_dir, self.imgs[idx])
+        img_path = os.path.join(self.root, self.imgs[idx])
         img = Image.open(img_path).convert("RGB")
         label = self.imgs[idx].split('_')[-1].split('.')[0]
         label = float(label) / 50
@@ -33,12 +34,12 @@ class VideoSequenceDataset(Dataset):
         self.transforms = transforms
         self.imgs = list(sorted(os.listdir(args.img_root_dir)))
         self.interval, self.wsize, self.stride = interval, wsize, stride
-        self.img_seq= self._build_video_seq()
+        self.img_seq = self._build_video_seq()
 
     def __getitem__(self, idx):
-        imgs=self.img_seq[idx]
-        images=[]
-        labels=[]
+        imgs = self.img_seq[idx]
+        images = []
+        labels = []
         for i in imgs:
             img_path = os.path.join(args.img_root_dir, i)
             img = Image.open(img_path).convert("RGB")
@@ -48,8 +49,8 @@ class VideoSequenceDataset(Dataset):
                 img = self.transforms(img)
             images.append(img)
             labels.append(torch.as_tensor(label))
-        images=torch.stack(images,dim=0)
-        labels=torch.stack(labels,dim=0)
+        images = torch.stack(images, dim=0)
+        labels = torch.stack(labels, dim=0)
         return images, labels
 
     def __len__(self):
@@ -61,14 +62,14 @@ class VideoSequenceDataset(Dataset):
         start_idx = 0
         length = len(self.imgs)
         while start_idx < length:
-            end_idx = min(length, start_idx +self.interval* self.wsize,)
+            end_idx = min(length, start_idx + self.interval * self.wsize, )
             excerpt = self.imgs[start_idx:end_idx]
-            start=0
-            record=[]
-            while start + self.interval<=len(excerpt):
+            start = 0
+            record = []
+            while start + self.interval <= len(excerpt):
                 record.append(excerpt[start])
                 start += self.interval
-            if len(record)==self.wsize:
+            if len(record) == self.wsize:
                 img_data.append(record)
             start_idx += self.stride
         return img_data
@@ -104,7 +105,7 @@ if __name__ == '__main__':
         shuffle=False,
         num_workers=args.workers,
     )
-    for i,j in data_loader:
+    for i, j in data_loader:
         print(i.size())
         print(j.size())
 

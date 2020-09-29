@@ -9,7 +9,7 @@ dataset_dir: "./datasets"
 # train options
 seed: 42 # sacred handles automatic seeding when passed in the config
 batch_size: 8
-test_batch_size: 16
+test_batch_size: 10
 image_size: 224
 start_epoch: 0
 epochs: 100
@@ -35,10 +35,11 @@ logistic_batch_size: 256
 logistic_epochs: 500
 
 img_scale_factor: 2
-img_root_dir: "F:/data/visibility/output"
-#img_root_dir: "/home/dl/data/visibility/output"
+img_train_dir: "/home/dl/data/visibility/train"
+#img_test_dir: "F:/data/visibility/test"
+img_test_dir: "/home/dl/data/visibility/test"
 img_height: 360
 img_width: 640
 past_window: 6
 model_save1: '/home/dl/Public/GSW/project/visibility_prediction/save/resnet_50.pth'
-#model_save1: 'D:/Visibility_prediction/save/resnet_50.pth'
+#model_save1: 'D:/Visibility_prediction/save/resnet_50-1.pth'
